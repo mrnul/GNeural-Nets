@@ -61,6 +61,8 @@ struct ThreadInfo
 	unsigned int EliteCount;
 	// How many parents for each offspring
 	unsigned int ParentCount;
+	// A network will be alive for 'DieGen' number of generations
+	unsigned int MaxGen;
 	// The mutation probability
 	float MutationProb;
 
@@ -75,7 +77,7 @@ struct ThreadInfo
 	ThreadInfo()
 	{
 		Quit = Done = WakeUp = false;
-		ID = First = Last = EliteCount = ParentCount = 0;
+		ID = First = Last = EliteCount = ParentCount = MaxGen = 0;
 		MutationProb = 0.0f;
 		input = output = 0;
 	}
@@ -106,6 +108,8 @@ private:
 	unsigned int RandomFloatsCount;
 	// Number of worker threads
 	unsigned int ThreadCount;
+	// Initialization SD
+	float InitSD;
 	// The population vector
 	vector<NetworkWithInfo> Population;
 	// A vector to store random numbers, this acts like a lookup table
@@ -125,7 +129,9 @@ public:
 		const float initSD, const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency());
 
 	NetworkWithInfo CalcNextGeneration(const int parentCount, const float mutationProb,
-		const vector<vector<float>>& input, const vector<vector<float>>& output);
+		const vector<vector<float>>& input, const vector<vector<float>>& output, const unsigned int maxgen = (unsigned int)-1);
+
+	unsigned int KillEliteAtRandom(const float p, const float newSD);
 
 	void TerminateThreads();
 
