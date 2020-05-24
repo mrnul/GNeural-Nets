@@ -94,20 +94,20 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 							// offspring inherits values at random
 							const int prnt = xorshf96() % ThreadInformation[ID].ParentCount;
 							x.second.Weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].InputMap[x.second.InNeuron].Weight;
+							
+							if ((float)xorshf96() / (float)(ULONG_MAX) >= ThreadInformation[ID].MutationProb)
+								continue;
 
-							// introduce a mutation if must and store some statistics
-							if ((float)xorshf96() / (float)(ULONG_MAX) < ThreadInformation[ID].MutationProb)
-							{
-								const float val = NormalDistributedFloats[xorshf96() % RandomFloatsCount];
-								x.second.Weight += val;
-								Population[o].ExInfo.NumberOfMutations++;
-								Population[o].ExInfo.TotalMutationValue += val;
+							// introduce a mutation and store some statistics
+							const float val = NormalDistributedFloats[xorshf96() % RandomFloatsCount];
+							x.second.Weight += val;
+							Population[o].ExInfo.NumberOfMutations++;
+							Population[o].ExInfo.TotalMutationValue += val;
 
-								if (Population[o].ExInfo.MaxMutationValue < val)
-									Population[o].ExInfo.MaxMutationValue = val;
-								else if (Population[o].ExInfo.MinMutationValue > val)
-									Population[o].ExInfo.MinMutationValue = val;
-							}
+							if (Population[o].ExInfo.MaxMutationValue < val)
+								Population[o].ExInfo.MaxMutationValue = val;
+							else if (Population[o].ExInfo.MinMutationValue > val)
+								Population[o].ExInfo.MinMutationValue = val;
 						}
 					});
 
