@@ -200,7 +200,7 @@ float GNeuralNetwork::TotalError(const vector<vector<float>>& input, const vecto
 			//Info.Error += abs(output[i][c] - res[c].Activation);
 			if (output[i][c] != 0.0f)
 			{
-				Info.Error += -output[i][c] * log(res[c].Activation);
+				Info.Error += -output[i][c] * std::log(res[c].Activation);
 				break;
 			}
 		}
@@ -223,7 +223,7 @@ NetInfo GNeuralNetwork::TotalErrorAccuracy(const vector<vector<float>>& input, c
 			//Info.Error += abs(output[i][c] - res[c].Activation);
 			if (output[i][c] != 0.0f)
 			{
-				Info.Error += -output[i][c] * log(res[c].Activation);
+				Info.Error += -output[i][c] * std::log(res[c].Activation);
 				break;
 			}
 		}

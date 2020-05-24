@@ -66,23 +66,17 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 				for (unsigned int p = 0; p < ThreadInformation[ID].ParentCount; p++)
 					parents[p] = xorshf96() % EliteCount;
 
-				// for each layer
-				const unsigned int LayerCount = (unsigned int)Population[o].Network.Layers.size();
-				for (unsigned int l = 0; l < LayerCount; l++)
-				{
-					// for each neuron
-					const unsigned int NeuronCount = (unsigned int)Population[o].Network.Layers[l].Neurons.size();
-					for (unsigned int n = 0; n < NeuronCount; n++)
+				Population[o].Network.RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
 					{
 						// calculate bias
-						const int p = xorshf96() % ThreadInformation[ID].ParentCount;
-						Population[o].Network.Layers[l].Neurons[n].Bias = Population[parents[p]].Network.Layers[l].Neurons[n].Bias;
+						const int prnt = xorshf96() % ThreadInformation[ID].ParentCount;
+						layers[p.L].Neurons[p.N].Bias = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].Bias;
 
 						// introduce a mutation if must and store some statistics
 						if ((float)xorshf96() / (float)(ULONG_MAX) < ThreadInformation[ID].MutationProb)
 						{
 							const float val = NormalDistributedFloats[xorshf96() % RandomFloatsCount];
-							Population[o].Network.Layers[l].Neurons[n].Bias += val;
+							layers[p.L].Neurons[p.N].Bias += val;
 							Population[o].ExInfo.NumberOfMutations++;
 							Population[o].ExInfo.TotalMutationValue += val;
 
@@ -94,12 +88,12 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 
 						// calculate weights
 						// for each InputInfo
-						for (auto& x : Population[o].Network.Layers[l].Neurons[n].InputMap)
+						for (auto& x : Population[o].Network.Layers[p.L].Neurons[p.N].InputMap)
 						{
 							// use parents to produce an offspring
 							// offspring inherits values at random
-							const int p = xorshf96() % ThreadInformation[ID].ParentCount;
-							x.second.Weight = Population[parents[p]].Network.Layers[l].Neurons[n].InputMap[x.second.InNeuron].Weight;
+							const int prnt = xorshf96() % ThreadInformation[ID].ParentCount;
+							x.second.Weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].InputMap[x.second.InNeuron].Weight;
 
 							// introduce a mutation if must and store some statistics
 							if ((float)xorshf96() / (float)(ULONG_MAX) < ThreadInformation[ID].MutationProb)
@@ -115,8 +109,8 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 									Population[o].ExInfo.MinMutationValue = val;
 							}
 						}
-					}
-				}
+					});
+
 				// update error, accuracy and some statistics
 				const NetInfo tmpInfo = Population[o].Network.TotalErrorAccuracy(*ThreadInformation[ID].input, *ThreadInformation[ID].output,
 					Population[EliteCount - 1].Network.Info.Error);
