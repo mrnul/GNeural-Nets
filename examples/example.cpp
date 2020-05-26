@@ -12,16 +12,14 @@ int main()
 
 	const vector<int> topology = { (int)input[0].size() , 2 , (int)output[0].size() };
 
-	GNeuralNetwork Net;
-	Net.BuildFFNetwork(topology, 1.0f);
-
+	
+	GAGNN Test(GNeuralNetwork(topology), 20, 8, 1.0f, 1.0f, 100, 1);
 	NetworkWithInfo res;
-	GAGNN Test(Net, 10, 2, 1.0f, 1.0f, 1000, 1);
 
 	cout.precision(3);
 	while (res.Network.Info.Error > 0.01f)
 	{
-		res = Test.CalcNextGeneration(2, 0.1f, input, output, 10);
+		res = Test.CalcNextGeneration(2, 0.1f, input, output);
 		cout << res.Network.Info.Error << "\t|->\t";
 		cout << res.Network.Info.Accuracy << "\t" << res.ExInfo.Generation << "\t" << res.Network.Info.NumberOfWeights << "\t";
 		cout << Test.KillEliteAtRandom(0.1f, 1.0f);
