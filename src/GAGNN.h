@@ -117,7 +117,7 @@ private:
 	// A container to hold all threads and information for each thread
 	deque<ThreadInfo> ThreadInformation;
 public:
-	GAGNN() : PopCount(0), EliteCount(0), OffspringCount(0), RandomFloatsCount(0), ThreadCount(0), Population(vector<NetworkWithInfo>()) { }
+	GAGNN() : PopCount(0), EliteCount(0), OffspringCount(0), RandomFloatsCount(0), ThreadCount(0), InitSD(0.0f), Population(vector<NetworkWithInfo>()) { }
 
 	GAGNN(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
 		const float initSD, const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency())

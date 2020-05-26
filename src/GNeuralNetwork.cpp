@@ -272,6 +272,8 @@ void GNeuralNetwork::RandomizeWeights(const float mean, const float sd)
 
 void GNeuralNetwork::BuildFFNetwork(const vector<int>& topology, const float p)
 {
+	UniformRealRandom rnd(0.0, 1.0);
+	
 	const int layerCount = (int)topology.size();
 	Layers.resize(layerCount);
 	Layers[0].Neurons.resize(topology[0]);
@@ -283,7 +285,7 @@ void GNeuralNetwork::BuildFFNetwork(const vector<int>& topology, const float p)
 			Layers[l].Neurons[n].Zeroize = true;
 			for (int iv = 0; iv < topology[size_t(l) - 1]; iv++) // size_t to supress a warning
 			{
-				if ((float)rand() / (float)RAND_MAX < p)
+				if (rnd() < p)
 				{
 					InsertConnection(Point(l, n), InputInfo(Point(l - 1, iv), 0.0f));
 				}
