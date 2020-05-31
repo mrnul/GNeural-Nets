@@ -1,21 +1,13 @@
 #include "GAGNN.h"
 
-unsigned int GAGNN::xorshf96()
+unsigned int fast_rand()
 {
-	x ^= x << 16;
-	x ^= x >> 5;
-	x ^= x << 1;
-
-	const unsigned int t = x;
-	x = y;
-	y = z;
-	z = t ^ x ^ y;
-
-	return z;
+	GSeed = (214013 * GSeed + 2531011);
+	return (GSeed >> 16) & 0x7FFF;
 }
 
 void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
-	const float initSD, const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount)
+	const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount)
 {
 	TerminateThreads();
 
@@ -27,23 +19,17 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 	OffspringCount = populationCount - eliteCount;
 	RandomFloatsCount = randomNumberCount;
 	ThreadCount = threadCount;
-	InitSD = initSD;
 
 	Population.resize(PopCount);
 	for (unsigned int i = 0; i < PopCount; i++)
 	{
 		Population[i].Network.Layers = reference.Layers;
-		Population[i].Network.RandomizeWeights(0.0f, initSD);
+		Population[i].Network.RandomizeWeights();
 		Population[i].Network.Info.Error = INFINITY;
 		Population[i].Network.Info.NumberOfWeights = Population[i].Network.NumberOfWeights();
 	}
 
-	NormalRealRandom rnd(0.0, mutationSD);
-	NormalDistributedFloats.resize(RandomFloatsCount);
-	for (unsigned int i = 0; i < RandomFloatsCount; i++)
-	{
-		NormalDistributedFloats[i] = (float)rnd();
-	}
+	GenerateRandomFloats(randomNumberCount, mutationSD);
 
 	const auto Worker = [&](int ID)
 	{
@@ -56,7 +42,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 			if (ThreadInformation[ID].Quit)
 				return;
 
-			vector<int> parents(ThreadInformation[ID].ParentCount);
+			vector<int> parents(ThreadInformation[ID].Parameters.ParentCount);
 			for (unsigned int o = ThreadInformation[ID].First; o < ThreadInformation[ID].Last; o++)
 			{
 				// early stop
@@ -64,9 +50,9 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 					break;
 
 				// die if must
-				if (Population[o].ExInfo.Generation >= ThreadInformation[ID].MaxGen)
+				if (Population[o].ExInfo.Generation >= ThreadInformation[ID].Parameters.MaxGen)
 				{
-					Population[o].Network.RandomizeWeights(0.0f, InitSD);
+					Population[o].Network.RandomizeWeights();
 					Population[o].Network.Info.Accuracy = NetInfo().Accuracy;
 					Population[o].Network.Info.Error = NetInfo().Error;
 					Population[o].ExInfo = ExNetInfo();
@@ -74,60 +60,57 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 				}
 
 				// figure out who the parents are
-				for (unsigned int p = 0; p < ThreadInformation[ID].ParentCount; p++)
-					parents[p] = xorshf96() % EliteCount;
+				for (unsigned int p = 0; p < ThreadInformation[ID].Parameters.ParentCount; p++)
+					parents[p] = fast_rand() % EliteCount;
 
-				Population[o].Network.RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
+				Population[o].Network.RunThroughEachWeight([&](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
 					{
-						// calculate bias
-						const int prnt = xorshf96() % ThreadInformation[ID].ParentCount;
-						layers[p.L].Neurons[p.N].Bias = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].Bias;
-
-						// introduce a mutation if must and store some statistics
-						if ((float)xorshf96() / (float)(ULONG_MAX) < ThreadInformation[ID].MutationProb)
+						// a random parent
+						const int prnt = fast_rand() % ThreadInformation[ID].Parameters.ParentCount;
+						if (index == (unsigned int)-1) // is bias
 						{
-							const float val = NormalDistributedFloats[xorshf96() % RandomFloatsCount];
-							layers[p.L].Neurons[p.N].Bias += val;
-							Population[o].ExInfo.NumberOfMutations++;
-							Population[o].ExInfo.TotalMutationValue += val;
-
-							if (Population[o].ExInfo.MaxMutationValue < val)
-								Population[o].ExInfo.MaxMutationValue = val;
-							else if (Population[o].ExInfo.MinMutationValue > val)
-								Population[o].ExInfo.MinMutationValue = val;
+							weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].Bias;
+						}
+						else // is not bias
+						{
+							weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].InputVector[index].Weight;
 						}
 
-						// calculate weights
-						// for each InputInfo
-						for (auto& x : Population[o].Network.Layers[p.L].Neurons[p.N].InputMap)
-						{
-							// use parents to produce an offspring
-							// offspring inherits values at random
-							const int prnt = xorshf96() % ThreadInformation[ID].ParentCount;
-							x.second.Weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].InputMap[x.second.InNeuron].Weight;
+						// check if it is time to introduce a mutation
+						if ((float)fast_rand() * FAST_RAND_TO_PROB >= ThreadInformation[ID].Parameters.MutationProb)
+							return; // return if not
 
-							if ((float)xorshf96() / (float)(ULONG_MAX) >= ThreadInformation[ID].MutationProb)
-								continue;
+						// introduce a mutation and store some statistics
+						const float val = NormalDistributedFloats[fast_rand() % RandomFloatsCount];
+						weight += val;
+						Population[o].ExInfo.NumberOfMutations++;
+						Population[o].ExInfo.TotalMutationValue += val;
 
-							// introduce a mutation and store some statistics
-							const float val = NormalDistributedFloats[xorshf96() % RandomFloatsCount];
-							x.second.Weight += val;
-							Population[o].ExInfo.NumberOfMutations++;
-							Population[o].ExInfo.TotalMutationValue += val;
-
-							if (Population[o].ExInfo.MaxMutationValue < val)
-								Population[o].ExInfo.MaxMutationValue = val;
-							else if (Population[o].ExInfo.MinMutationValue > val)
-								Population[o].ExInfo.MinMutationValue = val;
-						}
+						if (Population[o].ExInfo.MaxMutationValue < val)
+							Population[o].ExInfo.MaxMutationValue = val;
+						else if (Population[o].ExInfo.MinMutationValue > val)
+							Population[o].ExInfo.MinMutationValue = val;
 					});
+				
+				// apply maxnorm
+				if (ThreadInformation[ID].Parameters.MaxNorm > 0.0f)
+					Population[o].Network.MaxNorm(ThreadInformation[ID].Parameters.MaxNorm);
 
 				// update error, accuracy and some statistics
 				const NetInfo tmpInfo = Population[o].Network.TotalErrorAccuracy(*ThreadInformation[ID].input, *ThreadInformation[ID].output,
 					Population[EliteCount - 1].Network.Info.Error);
 
+				// store error and accuracy
 				Population[o].Network.Info.Error = tmpInfo.Error;
 				Population[o].Network.Info.Accuracy = tmpInfo.Accuracy;
+
+				// update with w1 and/or w2 if must
+				if (ThreadInformation[ID].Parameters.a1 > 0.0f)
+					Population[o].Network.Info.Error += ThreadInformation[ID].Parameters.a1 * Population[o].Network.W1();
+				if (ThreadInformation[ID].Parameters.a2 > 0.0f)
+					Population[o].Network.Info.Error += ThreadInformation[ID].Parameters.a2 * Population[o].Network.W2();
+
+				// increase generation counter
 				Population[o].ExInfo.Generation++;
 			}
 
@@ -148,13 +131,22 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 		ThreadInformation[i].ID = i;
 		ThreadInformation[i].First = EliteCount + i * numPerThread;
 		ThreadInformation[i].Last = EliteCount + (i + 1) * numPerThread;
-		ThreadInformation[i].EliteCount = EliteCount;
 		ThreadInformation[i].Thread = thread(Worker, i);
 	}
 }
 
-NetworkWithInfo GAGNN::CalcNextGeneration(const int parentCount, const float mutationProb,
-	const vector<vector<float>>& input, const vector<vector<float>>& output, const unsigned int maxgen)
+void GAGNN::GenerateRandomFloats(const unsigned int count, const float SD)
+{
+	NormalRealRandom rnd(0.0, SD);
+	NormalDistributedFloats.resize(count);
+	for (unsigned int i = 0; i < count; i++)
+	{
+		NormalDistributedFloats[i] = (float)rnd();
+	}
+	RandomFloatsCount = count;
+}
+
+void GAGNN::CalcNextGeneration(const GAGNNParams Params, const vector<vector<float>>& input, const vector<vector<float>>& output)
 {
 	// wakeup threads
 	for (unsigned int i = 0; i < ThreadCount; i++)
@@ -163,11 +155,9 @@ NetworkWithInfo GAGNN::CalcNextGeneration(const int parentCount, const float mut
 			std::lock_guard<std::mutex> lk(ThreadInformation[i].m);
 			ThreadInformation[i].WakeUp = true;
 			ThreadInformation[i].Done = false;
-			ThreadInformation[i].ParentCount = parentCount;
-			ThreadInformation[i].MutationProb = mutationProb;
+			ThreadInformation[i].Parameters = Params;
 			ThreadInformation[i].input = &input;
 			ThreadInformation[i].output = &output;
-			ThreadInformation[i].MaxGen = maxgen;
 		}
 		ThreadInformation[i].cv.notify_one();
 	}
@@ -181,26 +171,36 @@ NetworkWithInfo GAGNN::CalcNextGeneration(const int parentCount, const float mut
 
 	// sort all
 	std::sort(Population.begin(), Population.end(), [](const NetworkWithInfo& a, const NetworkWithInfo& b) {return a.Network.Info.Error < b.Network.Info.Error; });
-
-	// return the best
-	return Population[0];
 }
 
-unsigned int GAGNN::KillEliteAtRandom(const float p, const float newSD)
+unsigned int GAGNN::KillEliteAtRandom(const float p)
 {
 	unsigned int Count = 0;
 	for (unsigned int i = 0; i < EliteCount; i++)
 	{
-		if ((float)xorshf96() / (float)ULONG_MAX >= p)
+		if ((float)fast_rand() * FAST_RAND_TO_PROB >= p)
 			continue;
 
-		Population[i].Network.RandomizeWeights(0.0f, newSD);
+		Population[i].Network.RandomizeWeights();
 		Population[i].Network.Info.Accuracy = NetInfo().Accuracy;
 		Population[i].Network.Info.Error = NetInfo().Error;
 		Population[i].ExInfo = ExNetInfo();
 		Count++;
 	}
 	return Count;
+}
+
+void GAGNN::MaxNorm(const float max)
+{
+	for (unsigned int i = 0; i < PopCount; i++)
+	{
+		Population[i].Network.MaxNorm(max);
+	}
+}
+
+NetworkWithInfo GAGNN::GetBest(const unsigned int i)
+{
+	return Population[i];
 }
 
 void GAGNN::TerminateThreads()

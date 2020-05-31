@@ -72,11 +72,11 @@ struct Neuron
 	float (*ActivationFunction)(const float x);
 	bool Zeroize;
 
-	// A map, each input should be unique
-	map<Point, InputInfo> InputMap;
+	// each neuron's input
+	vector<InputInfo> InputVector;
 
 	Neuron() : Activation(0.0f), WeightedSum(0.0f), Bias(0.0f), ActivationFunction(DefaultActivation), Zeroize(true),
-		InputMap(map<Point, InputInfo>()) { }
+		InputVector(vector<InputInfo>()) { }
 };
 
 struct Layer
@@ -97,20 +97,28 @@ public:
 	vector<Layer> Layers;
 
 	GNeuralNetwork() : Layers(vector<Layer>()) { }
-	GNeuralNetwork(const vector<int>& topology)
+	GNeuralNetwork(const vector<int>& topology, const float p = 1.0f)
 	{
-		BuildFFNetwork(topology);
+		BuildFFNetwork(topology, p);
+	}
+
+	GNeuralNetwork(const vector<int>& topology, const vector<float> p)
+	{
+		BuildFFNetwork(topology, p);
 	}
 
 	unsigned Zeroize(const bool forced);
 
-	void RunThroughEachNeuron(void (Perform)(vector<Layer>& layers, const Point& p));
+	//void RunThroughEachNeuron(void (Perform)(vector<Layer>& layers, const Point& p));
 	void RunThroughEachNeuron(function<void(vector<Layer>& layers, const Point& p)> Perform);
 
-	void RunThroughEachNeuronInLayer(void(Perform(vector<Layer>& layers, const Point& p)), const unsigned int layerNum);
+	//void RunThroughEachNeuronInLayer(void(Perform(vector<Layer>& layers, const Point& p)), const unsigned int layerNum);
 	void RunThroughEachNeuronInLayer(function<void(vector<Layer>& layers, const Point& p)> Perform, const unsigned int layerNum);
 
-	void RunThroughEachLayer(void (Perform)(vector<Layer>& layers, const unsigned int l));
+	//void RunThroughEachWeight(void(Perform(vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)));
+	void RunThroughEachWeight(function<void(vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)> Perform);
+
+	//void RunThroughEachLayer(void (Perform)(vector<Layer>& layers, const unsigned int l));
 	void RunThroughEachLayer(function<void(vector<Layer>& layers, const unsigned int l)> Perform);
 
 	const vector<Neuron>& Feed(const vector<float>& input, const bool forceZero = false);
@@ -123,9 +131,15 @@ public:
 	float Accuracy(const vector<vector<float>>& input, const vector<vector<float>>& output,
 		bool(ClassifierCheck(const vector<Neuron>& in, const vector<float>& out)) = DefaultClassifierCheck);
 
-	void RandomizeWeights(const float mean, const float sd);
+	void RandomizeWeights();
 
-	void BuildFFNetwork(const vector<int>& topology, const float p = 1.0f);
+	void BuildFFNetwork(const vector<int> topology, const float p = 1.0f);
+	void BuildFFNetwork(const vector<int> topology, const vector<float> p);
+
+	float W1();
+	float W2();
+
+	void MaxNorm(const float max);
 
 	unsigned int NumberOfWeights();
 
