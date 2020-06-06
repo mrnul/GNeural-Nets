@@ -1,4 +1,5 @@
 #include "GNeuralNetwork.h"
+#include <immintrin.h>
 
 float DefaultActivation(const float x)
 {
@@ -13,10 +14,68 @@ void DoFeedWork(vector<Layer>& layers, const Point& p)
 	if (layers[p.L].Neurons[p.N].Zeroize)
 		layers[p.L].Neurons[p.N].WeightedSum = 0.0f;
 
-	//for each input
-	for (const auto& x : layers[p.L].Neurons[p.N].InputVector)
+	const unsigned int InSize = (unsigned int)layers[p.L].Neurons[p.N].InputVector.size();
+	const unsigned int remReps = InSize % 16;
+	const unsigned int mainReps = InSize - remReps;
+
+	// for every 16 inputs use intrinsics
+	for (size_t i = 0; i < mainReps; i += 16)
 	{
-		layers[p.L].Neurons[p.N].WeightedSum += layers[x.InNeuron.L].Neurons[x.InNeuron.N].Activation * x.Weight;
+		// a constant reference only to make life easier
+		const vector<InputInfo>& Input = layers[p.L].Neurons[p.N].InputVector;
+
+		// vectorize the weights
+		const __m512 Weights = _mm512_set_ps
+		(
+			Input[i + 0].Weight,
+			Input[i + 1].Weight,
+			Input[i + 2].Weight,
+			Input[i + 3].Weight,
+			Input[i + 4].Weight,
+			Input[i + 5].Weight,
+			Input[i + 6].Weight,
+			Input[i + 7].Weight,
+			Input[i + 8].Weight,
+			Input[i + 9].Weight,
+			Input[i + 10].Weight,
+			Input[i + 11].Weight,
+			Input[i + 12].Weight,
+			Input[i + 13].Weight,
+			Input[i + 14].Weight,
+			Input[i + 15].Weight
+		);
+
+		// vectorize the activations
+		const __m512 Activations = _mm512_set_ps
+		(
+			layers[Input[i + 0].InNeuron.L].Neurons[Input[i + 0].InNeuron.N].Activation,
+			layers[Input[i + 1].InNeuron.L].Neurons[Input[i + 1].InNeuron.N].Activation,
+			layers[Input[i + 2].InNeuron.L].Neurons[Input[i + 2].InNeuron.N].Activation,
+			layers[Input[i + 3].InNeuron.L].Neurons[Input[i + 3].InNeuron.N].Activation,
+			layers[Input[i + 4].InNeuron.L].Neurons[Input[i + 4].InNeuron.N].Activation,
+			layers[Input[i + 5].InNeuron.L].Neurons[Input[i + 5].InNeuron.N].Activation,
+			layers[Input[i + 6].InNeuron.L].Neurons[Input[i + 6].InNeuron.N].Activation,
+			layers[Input[i + 7].InNeuron.L].Neurons[Input[i + 7].InNeuron.N].Activation,
+			layers[Input[i + 8].InNeuron.L].Neurons[Input[i + 8].InNeuron.N].Activation,
+			layers[Input[i + 9].InNeuron.L].Neurons[Input[i + 9].InNeuron.N].Activation,
+			layers[Input[i + 10].InNeuron.L].Neurons[Input[i + 10].InNeuron.N].Activation,
+			layers[Input[i + 11].InNeuron.L].Neurons[Input[i + 11].InNeuron.N].Activation,
+			layers[Input[i + 12].InNeuron.L].Neurons[Input[i + 12].InNeuron.N].Activation,
+			layers[Input[i + 13].InNeuron.L].Neurons[Input[i + 13].InNeuron.N].Activation,
+			layers[Input[i + 14].InNeuron.L].Neurons[Input[i + 14].InNeuron.N].Activation,
+			layers[Input[i + 15].InNeuron.L].Neurons[Input[i + 15].InNeuron.N].Activation
+		);
+
+		// multiply and add to the weighted sum
+		layers[p.L].Neurons[p.N].WeightedSum += _mm512_reduce_add_ps(_mm512_mul_ps(Activations, Weights));
+	}
+
+	// for the rest use a simple for loop
+	for (size_t i = mainReps; i < InSize; i++)
+	{
+		const vector<InputInfo>& Input = layers[p.L].Neurons[p.N].InputVector;
+
+		layers[p.L].Neurons[p.N].WeightedSum += layers[Input[i].InNeuron.L].Neurons[Input[i].InNeuron.N].Activation * Input[i].Weight;
 	}
 
 	//activate
@@ -113,7 +172,7 @@ void GNeuralNetwork::RunThroughEachWeight(function<void(vector<Layer>& layers, c
 {
 	//for each layer
 	const unsigned int LayerCount = (unsigned int)Layers.size();
-	for (unsigned int l = 0; l < LayerCount; l++)
+	for (unsigned int l = 1; l < LayerCount; l++)
 	{
 		//for each neuron
 		const unsigned int NeuronCount = (unsigned int)Layers[l].Neurons.size();
@@ -245,25 +304,19 @@ float GNeuralNetwork::Accuracy(const vector<vector<float>>& input, const vector<
 	return Info.Accuracy;
 }
 
-void GNeuralNetwork::RandomizeWeights()
+void GNeuralNetwork::RandomizeWeights(const float norm)
 {
 	UniformRealRandom rnd(-1.0, 1.0);
 
-	RunThroughEachNeuron([&](vector<Layer>& layer, const Point& p)
+	RunThroughEachWeight([&](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
 		{
-			if (p.L == 0)
-				return;
+			const float c = sqrt(12.0f / (Layers[p.L - 1].Neurons.size() + 1.0f + Layers[p.L].Neurons[p.N].InputVector.size()));
+			weight = (float)rnd() * c;
+		}
+	);
 
-			const float c = sqrt(12.0f / (Layers[p.L - 1].Neurons.size() + 1.0f + Layers[p.L].Neurons.size()));
-			//random bias
-			layer[p.L].Neurons[p.N].Bias = (float)rnd() * c;
-
-			//for each input
-			for (auto& x : layer[p.L].Neurons[p.N].InputVector)
-			{
-				x.Weight = (float)rnd() * c;
-			}
-		});
+	if (norm > 0.0f)
+		ForceNorm(norm);
 }
 
 void GNeuralNetwork::BuildFFNetwork(const vector<int> topology, const float p)
@@ -298,8 +351,33 @@ void GNeuralNetwork::BuildFFNetwork(const vector<int> topology, const vector<flo
 	Info.NumberOfWeights = NumberOfWeights();
 }
 
+float GNeuralNetwork::MaxWeightValue()
+{
+	float max = -INFINITY;
+	RunThroughEachWeight([&max](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
+		{
+			if (max < weight)
+				max = weight;
+		});
+
+	return max;
+}
+
+float GNeuralNetwork::MinWeightValue()
+{
+	float min = INFINITY;
+	RunThroughEachWeight([&min](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
+		{
+			if (min > weight)
+				min = weight;
+		});
+
+	return min;
+}
+
 void GNeuralNetwork::MaxNorm(const float max)
 {
+
 	RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
 		{
 			if (p.L == 0)
@@ -319,6 +397,29 @@ void GNeuralNetwork::MaxNorm(const float max)
 			for (unsigned int i = 0; i < InCount; i++)
 			{
 				layers[p.L].Neurons[p.N].InputVector[i].Weight = layers[p.L].Neurons[p.N].InputVector[i].Weight * max / Norm;
+			}
+		});
+}
+
+void GNeuralNetwork::ForceNorm(const float norm)
+{
+	RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
+		{
+			if (p.L == 0)
+				return;
+
+			float Norm = 0.0f;
+			const unsigned int InCount = (unsigned int)layers[p.L].Neurons[p.N].InputVector.size();
+			for (unsigned int i = 0; i < InCount; i++)
+			{
+				Norm += layers[p.L].Neurons[p.N].InputVector[i].Weight * layers[p.L].Neurons[p.N].InputVector[i].Weight;
+			}
+
+			Norm = std::sqrt(Norm);
+
+			for (unsigned int i = 0; i < InCount; i++)
+			{
+				layers[p.L].Neurons[p.N].InputVector[i].Weight = layers[p.L].Neurons[p.N].InputVector[i].Weight * norm / Norm;
 			}
 		});
 }
@@ -359,10 +460,17 @@ unsigned int GNeuralNetwork::NumberOfWeights()
 	return count;
 }
 
-bool GNeuralNetwork::InsertConnection(const Point& Where, const InputInfo& Connection)
+bool GNeuralNetwork::InsertConnection(const Point& Where, const InputInfo& Connection, const bool atEnd)
 {
 	const unsigned int PrevSize = (unsigned int)Layers[Where.L].Neurons[Where.N].InputVector.size();
-	Layers[Where.L].Neurons[Where.N].InputVector.push_back(Connection);
+	if (atEnd)
+	{
+		Layers[Where.L].Neurons[Where.N].InputVector.push_back(Connection);
+	}
+	else
+	{
+		Layers[Where.L].Neurons[Where.N].InputVector.insert(Layers[Where.L].Neurons[Where.N].InputVector.begin(), Connection);
+	}
 
 	const unsigned int CurrSize = (unsigned int)Layers[Where.L].Neurons[Where.N].InputVector.size();
 

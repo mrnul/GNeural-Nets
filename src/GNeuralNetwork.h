@@ -131,19 +131,23 @@ public:
 	float Accuracy(const vector<vector<float>>& input, const vector<vector<float>>& output,
 		bool(ClassifierCheck(const vector<Neuron>& in, const vector<float>& out)) = DefaultClassifierCheck);
 
-	void RandomizeWeights();
+	void RandomizeWeights(const float norm = 0.0f);
 
 	void BuildFFNetwork(const vector<int> topology, const float p = 1.0f);
 	void BuildFFNetwork(const vector<int> topology, const vector<float> p);
+
+	float MaxWeightValue();
+	float MinWeightValue();
 
 	float W1();
 	float W2();
 
 	void MaxNorm(const float max);
+	void ForceNorm(const float norm);
 
 	unsigned int NumberOfWeights();
 
-	bool InsertConnection(const Point& Where, const InputInfo& Connection);
+	bool InsertConnection(const Point& Where, const InputInfo& Connection, const bool atEnd = true);
 
 	string GetOutputString(const int decimal = 4);
 };

@@ -13,8 +13,8 @@ using std::condition_variable;
 using std::deque;
 
 constexpr float FAST_RAND_TO_PROB = 1.0f / 32767.0f;
+constexpr unsigned int PROB_TO_FAST_RAND = 32767;
 
-static unsigned int GSeed = 0;
 unsigned int fast_rand();
 
 // Extended information about the network
@@ -55,11 +55,15 @@ struct GAGNNParams
 	// max norm
 	float MaxNorm;
 
+	// mutation coefficient
+	float MutationCoeff;
+
 	GAGNNParams()
 	{
 		MaxGen = (unsigned int)-1;
 		MutationProb = a1 = a2 = 0.0f;
-		ParentCount = 0;
+		MutationCoeff = 1.0f;
+		ParentCount = 2;
 		MaxNorm = INFINITY;
 	}
 };
@@ -133,15 +137,15 @@ public:
 		Population(vector<NetworkWithInfo>()) { }
 
 	GAGNN(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
-		const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency())
+		const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency())
 	{
-		Initialize(reference, populationCount, eliteCount, mutationSD, randomNumberCount, threadCount);
+		Initialize(reference, populationCount, eliteCount, randomNumberCount, threadCount);
 	}
 
 	void Initialize(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
-		const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency());
+		const unsigned int randomNumberCount, const unsigned int threadCount = thread::hardware_concurrency());
 
-	void GenerateRandomFloats(const unsigned int count, const float SD);
+	void GenerateRandomFloats(const unsigned int count);
 
 	void CalcNextGeneration(const GAGNNParams Params, const vector<vector<float>>& input, const vector<vector<float>>& output);
 

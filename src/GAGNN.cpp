@@ -2,13 +2,16 @@
 
 unsigned int fast_rand()
 {
+	static unsigned int GSeed = rand();
 	GSeed = (214013 * GSeed + 2531011);
 	return (GSeed >> 16) & 0x7FFF;
 }
 
 void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
-	const float mutationSD, const unsigned int randomNumberCount, const unsigned int threadCount)
+	const unsigned int randomNumberCount, const unsigned int threadCount)
 {
+	srand((unsigned int)time(0));
+
 	TerminateThreads();
 
 	if (eliteCount >= populationCount)
@@ -29,7 +32,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 		Population[i].Network.Info.NumberOfWeights = Population[i].Network.NumberOfWeights();
 	}
 
-	GenerateRandomFloats(randomNumberCount, mutationSD);
+	GenerateRandomFloats(randomNumberCount);
 
 	const auto Worker = [&](int ID)
 	{
@@ -81,7 +84,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 							return; // return if not
 
 						// introduce a mutation and store some statistics
-						const float val = NormalDistributedFloats[fast_rand() % RandomFloatsCount];
+						const float val = NormalDistributedFloats[fast_rand() % RandomFloatsCount] * ThreadInformation[ID].Parameters.MutationCoeff;
 						weight += val;
 						Population[o].ExInfo.NumberOfMutations++;
 						Population[o].ExInfo.TotalMutationValue += val;
@@ -135,9 +138,9 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 	}
 }
 
-void GAGNN::GenerateRandomFloats(const unsigned int count, const float SD)
+void GAGNN::GenerateRandomFloats(const unsigned int count)
 {
-	NormalRealRandom rnd(0.0, SD);
+	NormalRealRandom rnd(0.0, 1.0);
 	NormalDistributedFloats.resize(count);
 	for (unsigned int i = 0; i < count; i++)
 	{
