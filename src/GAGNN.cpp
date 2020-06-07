@@ -45,7 +45,6 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 			if (ThreadInformation[ID].Quit)
 				return;
 
-			vector<int> parents(ThreadInformation[ID].Parameters.ParentCount);
 			for (unsigned int o = ThreadInformation[ID].First; o < ThreadInformation[ID].Last; o++)
 			{
 				// early stop
@@ -62,21 +61,17 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 					break;
 				}
 
-				// figure out who the parents are
-				for (unsigned int p = 0; p < ThreadInformation[ID].Parameters.ParentCount; p++)
-					parents[p] = fast_rand() % EliteCount;
-
 				Population[o].Network.RunThroughEachWeight([&](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
 					{
 						// a random parent
 						const int prnt = fast_rand() % ThreadInformation[ID].Parameters.ParentCount;
 						if (index == (unsigned int)-1) // is bias
 						{
-							weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].Bias;
+							weight = Population[prnt].Network.Layers[p.L].Neurons[p.N].Bias;
 						}
 						else // is not bias
 						{
-							weight = Population[parents[prnt]].Network.Layers[p.L].Neurons[p.N].InputVector[index].Weight;
+							weight = Population[prnt].Network.Layers[p.L].Neurons[p.N].InputVector[index].Weight;
 						}
 
 						// check if it is time to introduce a mutation

@@ -389,6 +389,7 @@ void GNeuralNetwork::MaxNorm(const float max)
 			{
 				Norm += layers[p.L].Neurons[p.N].InputVector[i].Weight * layers[p.L].Neurons[p.N].InputVector[i].Weight;
 			}
+			Norm += layers[p.L].Neurons[p.N].Bias * layers[p.L].Neurons[p.N].Bias;
 			Norm = std::sqrt(Norm);
 
 			if (Norm <= max)
@@ -396,8 +397,9 @@ void GNeuralNetwork::MaxNorm(const float max)
 
 			for (unsigned int i = 0; i < InCount; i++)
 			{
-				layers[p.L].Neurons[p.N].InputVector[i].Weight = layers[p.L].Neurons[p.N].InputVector[i].Weight * max / Norm;
+				layers[p.L].Neurons[p.N].InputVector[i].Weight *= max / Norm;
 			}
+			layers[p.L].Neurons[p.N].Bias *= max / Norm;
 		});
 }
 
@@ -415,12 +417,14 @@ void GNeuralNetwork::ForceNorm(const float norm)
 				Norm += layers[p.L].Neurons[p.N].InputVector[i].Weight * layers[p.L].Neurons[p.N].InputVector[i].Weight;
 			}
 
+			Norm += layers[p.L].Neurons[p.N].Bias * layers[p.L].Neurons[p.N].Bias;
 			Norm = std::sqrt(Norm);
 
 			for (unsigned int i = 0; i < InCount; i++)
 			{
-				layers[p.L].Neurons[p.N].InputVector[i].Weight = layers[p.L].Neurons[p.N].InputVector[i].Weight * norm / Norm;
+				layers[p.L].Neurons[p.N].InputVector[i].Weight *= norm / Norm;
 			}
+			layers[p.L].Neurons[p.N].Bias *= norm / Norm;
 		});
 }
 
