@@ -109,16 +109,12 @@ public:
 
 	unsigned Zeroize(const bool forced);
 
-	//void RunThroughEachNeuron(void (Perform)(vector<Layer>& layers, const Point& p));
 	void RunThroughEachNeuron(function<void(vector<Layer>& layers, const Point& p)> Perform);
 
-	//void RunThroughEachNeuronInLayer(void(Perform(vector<Layer>& layers, const Point& p)), const unsigned int layerNum);
 	void RunThroughEachNeuronInLayer(function<void(vector<Layer>& layers, const Point& p)> Perform, const unsigned int layerNum);
 
-	//void RunThroughEachWeight(void(Perform(vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)));
 	void RunThroughEachWeight(function<void(vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)> Perform);
 
-	//void RunThroughEachLayer(void (Perform)(vector<Layer>& layers, const unsigned int l));
 	void RunThroughEachLayer(function<void(vector<Layer>& layers, const unsigned int l)> Perform);
 
 	const vector<Neuron>& Feed(const vector<float>& input, const bool forceZero = false);

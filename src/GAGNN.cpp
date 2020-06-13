@@ -1,12 +1,5 @@
 #include "GAGNN.h"
 
-unsigned int fast_rand()
-{
-	static unsigned int GSeed = rand();
-	GSeed = (214013 * GSeed + 2531011);
-	return (GSeed >> 16) & 0x7FFF;
-}
-
 void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
 	const unsigned int randomNumberCount, const unsigned int threadCount)
 {
@@ -36,6 +29,14 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 
 	const auto Worker = [&](int ID)
 	{
+		unsigned int GSeed = rand();
+
+		const auto fast_rand = [&GSeed]()
+		{
+			GSeed = (214013 * GSeed + 2531011);
+			return (GSeed >> 16) & 0x7FFF;
+		};
+
 		while (true)
 		{
 			// wait till wakeup or quit is set to true
@@ -89,7 +90,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 						else if (Population[o].ExInfo.MinMutationValue > val)
 							Population[o].ExInfo.MinMutationValue = val;
 					});
-				
+
 				// apply maxnorm
 				if (ThreadInformation[ID].Parameters.MaxNorm > 0.0f)
 					Population[o].Network.MaxNorm(ThreadInformation[ID].Parameters.MaxNorm);
@@ -135,7 +136,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 
 void GAGNN::GenerateRandomFloats(const unsigned int count)
 {
-	NormalRealRandom rnd(0.0, 1.0);
+	NormalRealRandom rnd(0, 1.0);
 	NormalDistributedFloats.resize(count);
 	for (unsigned int i = 0; i < count; i++)
 	{
@@ -176,7 +177,7 @@ unsigned int GAGNN::KillEliteAtRandom(const float p)
 	unsigned int Count = 0;
 	for (unsigned int i = 0; i < EliteCount; i++)
 	{
-		if ((float)fast_rand() * FAST_RAND_TO_PROB >= p)
+		if ((float)rand() * (1.0f / RAND_MAX) >= p)
 			continue;
 
 		Population[i].Network.RandomizeWeights();
@@ -196,7 +197,7 @@ void GAGNN::MaxNorm(const float max)
 	}
 }
 
-NetworkWithInfo GAGNN::GetBest(const unsigned int i)
+NetworkWithInfo& GAGNN::GetBest(const unsigned int i)
 {
 	return Population[i];
 }

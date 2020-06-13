@@ -310,7 +310,7 @@ void GNeuralNetwork::RandomizeWeights(const float norm)
 
 	RunThroughEachWeight([&](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
 		{
-			const float c = sqrt(12.0f / (Layers[p.L - 1].Neurons.size() + 1.0f + Layers[p.L].Neurons[p.N].InputVector.size()));
+			const float c = sqrt(10.0f / (Layers[p.L].Neurons[p.N].InputVector.size()));
 			weight = (float)rnd() * c;
 		}
 	);

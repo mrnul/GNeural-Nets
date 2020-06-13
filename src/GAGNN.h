@@ -13,9 +13,6 @@ using std::condition_variable;
 using std::deque;
 
 constexpr float FAST_RAND_TO_PROB = 1.0f / 32767.0f;
-constexpr unsigned int PROB_TO_FAST_RAND = 32767;
-
-unsigned int fast_rand();
 
 // Extended information about the network
 struct ExNetInfo
@@ -152,7 +149,7 @@ public:
 	unsigned int KillEliteAtRandom(const float p);
 	void MaxNorm(const float max);
 
-	NetworkWithInfo GetBest(const unsigned int i = 0);
+	NetworkWithInfo& GetBest(const unsigned int i = 0);
 
 	void TerminateThreads();
 
