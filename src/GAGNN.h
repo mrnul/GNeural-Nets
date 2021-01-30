@@ -61,7 +61,7 @@ struct GAGNNParams
 		MutationProb = a1 = a2 = 0.0f;
 		MutationCoeff = 1.0f;
 		ParentCount = 2;
-		MaxNorm = INFINITY;
+		MaxNorm = 0.0f;
 	}
 };
 
