@@ -143,7 +143,15 @@ public:
 
 	unsigned int NumberOfWeights();
 
+	// inserts Connection in the InputVector of neuron (Where.L, Where.L) ONLY if it does not already exist
 	bool InsertConnection(const Point& Where, const InputInfo& Connection, const bool atEnd = true);
+	// searches for Connection in the InputVector of neuron (Where.L, Where.L)
+	unsigned int ConnectionExists(const Point& Where, const InputInfo& Connection);
 
-	string GetOutputString(const int decimal = 4);
+	string GetOutputString(const int decimal = 4) const;
+
+	bool EqualTopology(const GNeuralNetwork& other) const;
 };
+
+// result = (networks[0] + networks[1] + ... networks[N]) / (N + 1)
+unsigned int Average(const vector<GNeuralNetwork>& networks, GNeuralNetwork& result);

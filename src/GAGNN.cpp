@@ -1,4 +1,5 @@
 #include "GAGNN.h"
+#include <MyHeaders/XRandom.h>
 
 void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int populationCount, const unsigned int eliteCount,
 	const unsigned int randomNumberCount, const unsigned int threadCount)
@@ -27,15 +28,10 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 
 	GenerateRandomFloats(randomNumberCount);
 
+	// the thread that handles the population and does all the work
 	const auto Worker = [&](int ID)
 	{
-		unsigned int GSeed = rand();
-
-		const auto fast_rand = [&GSeed]()
-		{
-			GSeed = (214013 * GSeed + 2531011);
-			return (GSeed >> 16) & 0x7FFF;
-		};
+		UniformIntRandom IntRand(0, 524288);
 
 		while (true)
 		{
@@ -65,7 +61,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 				Population[o].Network.RunThroughEachWeight([&](vector<Layer>& layers, const Point& p, const unsigned int index, float& weight)
 					{
 						// a random parent
-						const int prnt = fast_rand() % ThreadInformation[ID].Parameters.ParentCount;
+						const int prnt = IntRand() % ThreadInformation[ID].Parameters.ParentCount;
 						if (index == (unsigned int)-1) // is bias
 						{
 							weight = Population[prnt].Network.Layers[p.L].Neurons[p.N].Bias;
@@ -76,11 +72,11 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 						}
 
 						// check if it is time to introduce a mutation
-						if ((float)fast_rand() * FAST_RAND_TO_PROB >= ThreadInformation[ID].Parameters.MutationProb)
+						if ((float)IntRand() * FAST_RAND_TO_PROB >= ThreadInformation[ID].Parameters.MutationProb)
 							return; // return if not
 
 						// introduce a mutation and store some statistics
-						const float val = NormalDistributedFloats[fast_rand() % RandomFloatsCount] * ThreadInformation[ID].Parameters.MutationCoeff;
+						const float val = NormalDistributedFloats[IntRand() % RandomFloatsCount] * ThreadInformation[ID].Parameters.MutationCoeff;
 						weight += val;
 						Population[o].ExInfo.NumberOfMutations++;
 						Population[o].ExInfo.TotalMutationValue += val;
@@ -177,7 +173,7 @@ unsigned int GAGNN::KillEliteAtRandom(const float p)
 	unsigned int Count = 0;
 	for (unsigned int i = 0; i < EliteCount; i++)
 	{
-		if ((float)rand() * (1.0f / RAND_MAX) >= p)
+		if ((float)rand() >= p * (float)RAND_MAX)
 			continue;
 
 		Population[i].Network.RandomizeWeights();

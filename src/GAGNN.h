@@ -12,7 +12,7 @@ using std::mutex;
 using std::condition_variable;
 using std::deque;
 
-constexpr float FAST_RAND_TO_PROB = 1.0f / 32767.0f;
+constexpr float FAST_RAND_TO_PROB = 1.0f / 524288.0f;
 
 // Extended information about the network
 struct ExNetInfo
