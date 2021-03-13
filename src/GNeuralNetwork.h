@@ -35,23 +35,6 @@ struct Point
 	}
 };
 
-inline bool operator<(const Point& left, const Point& right)
-{
-	if (left.L < right.L)
-	{
-		return true;
-	}
-	else if (left.L == right.L)
-	{
-		if (left.N < right.N)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
 // Information about the input of each neuron
 struct InputInfo
 {
@@ -130,6 +113,7 @@ public:
 	void RandomizeWeights(const float norm = 0.0f);
 
 	void BuildFFNetwork(const vector<int> topology, const float p = 1.0f);
+	//Note: the first value of p vector is not used
 	void BuildFFNetwork(const vector<int> topology, const vector<float> p);
 
 	float MaxWeightValue();
@@ -138,8 +122,12 @@ public:
 	float W1();
 	float W2();
 
-	void MaxNorm(const float max);
+	void MaxNorm(const float norm);
+	//Note: the first value of vector is not used
+	void MaxNorm(const vector<float> norm);
 	void ForceNorm(const float norm);
+	//Note: the first value of vector is not used
+	void ForceNorm(const vector<float> norm);
 
 	unsigned int NumberOfWeights();
 

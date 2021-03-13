@@ -49,11 +49,12 @@ struct GAGNNParams
 	// alpha values
 	float a1;
 	float a2;
-	// max norm
-	float MaxNorm;
 
 	// mutation coefficient
 	float MutationCoeff;
+
+	// max norm
+	vector<float> MaxNorm;
 
 	GAGNNParams()
 	{
@@ -61,7 +62,7 @@ struct GAGNNParams
 		MutationProb = a1 = a2 = 0.0f;
 		MutationCoeff = 1.0f;
 		ParentCount = 2;
-		MaxNorm = 0.0f;
+		MaxNorm = {};
 	}
 };
 
@@ -147,7 +148,6 @@ public:
 	void CalcNextGeneration(const GAGNNParams Params, const vector<vector<float>>& input, const vector<vector<float>>& output);
 
 	unsigned int KillEliteAtRandom(const float p);
-	void MaxNorm(const float max);
 
 	NetworkWithInfo& GetBest(const unsigned int i = 0);
 

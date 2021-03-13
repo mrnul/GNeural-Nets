@@ -88,8 +88,7 @@ void GAGNN::Initialize(const GNeuralNetwork& reference, const unsigned int popul
 					});
 
 				// apply maxnorm
-				if (ThreadInformation[ID].Parameters.MaxNorm > 0.0f)
-					Population[o].Network.MaxNorm(ThreadInformation[ID].Parameters.MaxNorm);
+				Population[o].Network.MaxNorm(ThreadInformation[ID].Parameters.MaxNorm);
 
 				// update error, accuracy and some statistics
 				const NetInfo tmpInfo = Population[o].Network.TotalErrorAccuracy(*ThreadInformation[ID].input, *ThreadInformation[ID].output,
@@ -183,14 +182,6 @@ unsigned int GAGNN::KillEliteAtRandom(const float p)
 		Count++;
 	}
 	return Count;
-}
-
-void GAGNN::MaxNorm(const float max)
-{
-	for (unsigned int i = 0; i < PopCount; i++)
-	{
-		Population[i].Network.MaxNorm(max);
-	}
 }
 
 NetworkWithInfo& GAGNN::GetBest(const unsigned int i)

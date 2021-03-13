@@ -284,7 +284,7 @@ void GNeuralNetwork::BuildFFNetwork(const vector<int> topology, const vector<flo
 			Layers[l].Neurons[n].Zeroize = true;
 			for (int iv = 0; iv < topology[size_t(l) - 1]; iv++) // size_t to supress a warning
 			{
-				if (rnd() < p[size_t(l) - 1])
+				if (rnd() < p[l])
 				{
 					InsertConnection(Point(l, n), InputInfo(Point(l - 1, iv), 0.0f));
 				}
@@ -318,13 +318,27 @@ float GNeuralNetwork::MinWeightValue()
 
 	return min;
 }
-
-void GNeuralNetwork::MaxNorm(const float max)
+void GNeuralNetwork::MaxNorm(const float norm)
 {
+	const vector<float> normv(Layers.size(), norm);
+	MaxNorm(normv);
+}
+
+void GNeuralNetwork::MaxNorm(const vector<float> norm)
+{
+	const unsigned int sz = (unsigned int)norm.size();
+	if (sz == 0)
+		return;
 
 	RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
 		{
 			if (p.L == 0)
+				return;
+
+			if (p.L >= sz)
+				return;
+
+			if (norm[p.L] == 0.0f)
 				return;
 
 			float Norm = 0.0f;
@@ -336,19 +350,25 @@ void GNeuralNetwork::MaxNorm(const float max)
 			Norm += layers[p.L].Neurons[p.N].Bias * layers[p.L].Neurons[p.N].Bias;
 			Norm = std::sqrt(Norm);
 
-			if (Norm <= max)
+			if (Norm <= norm[p.L])
 				return;
 
 			for (unsigned int i = 0; i < InCount; i++)
 			{
-				layers[p.L].Neurons[p.N].InputVector[i].Weight *= max / Norm;
+				layers[p.L].Neurons[p.N].InputVector[i].Weight *= norm[p.L] / Norm;
 			}
-			layers[p.L].Neurons[p.N].Bias *= max / Norm;
+			layers[p.L].Neurons[p.N].Bias *= norm[p.L] / Norm;
 		});
 }
 
 void GNeuralNetwork::ForceNorm(const float norm)
 {
+	const vector<float> normv(Layers.size(), norm);
+	ForceNorm(normv);
+}
+
+void GNeuralNetwork::ForceNorm(const vector<float> norm)
+{
 	RunThroughEachNeuron([&](vector<Layer>& layers, const Point& p)
 		{
 			if (p.L == 0)
@@ -366,9 +386,9 @@ void GNeuralNetwork::ForceNorm(const float norm)
 
 			for (unsigned int i = 0; i < InCount; i++)
 			{
-				layers[p.L].Neurons[p.N].InputVector[i].Weight *= norm / Norm;
+				layers[p.L].Neurons[p.N].InputVector[i].Weight *= norm[p.L] / Norm;
 			}
-			layers[p.L].Neurons[p.N].Bias *= norm / Norm;
+			layers[p.L].Neurons[p.N].Bias *= norm[p.L] / Norm;
 		});
 }
 
@@ -528,7 +548,7 @@ unsigned int Average(const vector<GNeuralNetwork>& networks, GNeuralNetwork& res
 				}
 
 				weight = av;
-			});	
+			});
 	}
 	return result.NumberOfWeights();
 }
