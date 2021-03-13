@@ -6,6 +6,7 @@
 
 using std::cout;
 using std::endl;
+using std::cin;
 
 struct Data
 {
@@ -53,7 +54,7 @@ int main()
 	vector<Data> data;
 
 	// load data
-	LoadIRIS("D:\\iris.data", data);
+	LoadIRIS("iris.data", data);
 
 	// shuffle them
 	std::random_shuffle(data.begin(), data.end());
@@ -79,27 +80,30 @@ int main()
 		testoutput.push_back(data[i].target);
 	}
 
-	// 4 input nodes, one hidden layer with 4 nodes, 3 output nodes
-	const vector<int> topology = { 4 , 4 , 3 };
-
 	GAGNNParams Params;
-	Params.MutationCoeff = 2.0f;
+	Params.MutationCoeff = 0.3f;
 	Params.MutationProb = 0.1f;
 	Params.ParentCount = 2;
 
-	// Creaete a population of 20 networks of which 4 are the elites.
+	// 4 input nodes, one hidden layer with 8 nodes, 3 output nodes
+	// Create a population of 20 networks of which 10 are the elites.
 	// Create 1000 random floats ~N(0, 1.0)
 	// Run in one worker thread
-	GAGNN Test(GNeuralNetwork(topology), 20, 4, 1000, 1);
+	GAGNN Test(GNeuralNetwork({ 4 , 8, 3 }), 20, 10, 1000, 1);
+
+	//A variable to store the best network
+	NetworkWithInfo res;
 
 	cout.precision(3);
 	while (Test.GetBest().Network.Info.Error > 1.0f)
 	{
 		Test.CalcNextGeneration(Params, input, output);
+		res = Test.GetBest();
+		cout << res.Network.Info.Error << "\t|->\t"\
+			<< res.Network.Info.Accuracy << "\t" << res.ExInfo.Generation << "\t" << res.Network.Info.NumberOfWeights << "\t"\
+			<< endl;
 	}
 
-	// A variable to store the best network
-	NetworkWithInfo res = Test.GetBest();
 	res.Network.TotalErrorAccuracy(input, output);
 	cout << "Results Training set:\n"\
 		<< res.Network.Info.Error << "\t|->\t"\
@@ -115,4 +119,7 @@ int main()
 	cout << "Max weight:" << res.Network.MaxWeightValue() << "\n"\
 		<< "Min weight:" << res.Network.MinWeightValue() << "\n"\
 		<< endl;
+
+	cout << "Done" << endl;
+	cin.get();
 }
